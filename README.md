@@ -1,8 +1,8 @@
 Loan Processing App
 
-src/main/resources/application.properties : 
+src/main/resources/loanInfo.properties : 
 
-spring.application.name=ABC Loan Processing
+spring.loanInfo.name=ABC Loan Processing
 
 # DataSource Config
 spring.datasource.url= <sql db url>

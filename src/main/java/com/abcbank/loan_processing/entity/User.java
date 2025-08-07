@@ -1,9 +1,9 @@
 package com.abcbank.loan_processing.entity;
+import com.abcbank.loan_processing.common.Address;
+import com.abcbank.loan_processing.common.ContactInfo;
+import jakarta.annotation.Nonnull;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -11,11 +11,11 @@ import java.util.List;
 @Entity
 @NoArgsConstructor
 @AllArgsConstructor
-@Getter
-@Setter
+@Data
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Nonnull
     private Long id;
     private String firstName;
     private String middleName;
@@ -37,10 +37,27 @@ public class User {
     })
     private ContactInfo contactInfo;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<Application> applications;
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<LoanInfo> loanInfos;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private EmploymentDetails employmentDetails;
 
+    public void updateFrom(User incomingUser) {
+        this.firstName = incomingUser.firstName;
+        this.middleName = incomingUser.middleName;
+        this.lastName = incomingUser.lastName;
+        this.dateOfBirth = incomingUser.dateOfBirth;
+        this.maritalStatus = incomingUser.maritalStatus;
+
+        if (this.contactInfo == null) {
+            this.contactInfo = new ContactInfo();
+        }
+        this.contactInfo.updateFrom(incomingUser.getContactInfo());
+
+        if (this.address == null) {
+            this.address = new Address();
+        }
+        this.address.updateFrom(incomingUser.getAddress());
+    }
 }

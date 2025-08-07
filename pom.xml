@@ -12,7 +12,7 @@
 	<artifactId>loan-processing</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ABC Loan Processing</name>
-	<description>A web application for managing loan processing workflows at ABC Bank. </description>
+	<description>A web loanInfo for managing loan processing workflows at ABC Bank. </description>
 	<url/>
 	<licenses>
 		<license/>
@@ -51,7 +51,7 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<optional>true</optional>
+			<version>1.18.38</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
