@@ -23,7 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
-public class ApplicationService {
+public class DummyApplicationService {
     @Autowired
     private UserRepository userRepository;
 
@@ -44,7 +44,7 @@ public class ApplicationService {
 
     @Autowired
     private AccountRepository accountRepository;
-    
+
     public Map<String,Object> getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails employmentDetails){
         double[] features = featureExtracter.extractFeaturesFromApplication(loanInfo,employmentDetails,user);
         Map<String, Object> mlResponse = mlService.getPrediction(features);
@@ -72,56 +72,46 @@ public class ApplicationService {
             if(userAccount.isPresent()) {
                 Long userId = userAccount.get().getUser().getId();
                 userPersonalDetails.setId(userId);
-                userPersonalDetails.setAccount(userAccount.get());
             }
 
-            Map statusMap = (getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails));
-            userPersonalDetails.setScore((Integer)statusMap.get("score"));
-            loanInfo.setStatus((String) statusMap.get("status"));
-            loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
+            String userSsn = userPersonalDetails.getSsnNumber();
+            Optional<User> existingUserOpt = userRepository.findBySsnNumber(userSsn);
 
-            userPersonalDetails.setEmploymentDetails(employmentDetails);
-            employmentDetails.setUser(userPersonalDetails);
-            userPersonalDetails.setLoanInfos(List.of(loanInfo));
-            loanInfo.setUser(userPersonalDetails);
 
-            userRepository.save(userPersonalDetails);
+
+            if (existingUserOpt.isPresent()) {
+                User existingUser = existingUserOpt.get();
+                Long existingEmploymentId = existingUser.getEmploymentDetails().getId();
+                employmentDetails.setId(existingEmploymentId);
+
+                existingUser.updateFrom(userPersonalDetails);
+                existingUser.setEmploymentDetails(employmentDetails);
+                employmentDetails.setUser(existingUser);
+
+                loanInfo.setUser(existingUser);
+                existingUser.getLoanInfos().add(loanInfo);
+
+                Map statusMap = getStatusFromModel(existingUser,loanInfo,employmentDetails);
+                existingUser.setScore((Integer)statusMap.get("score"));
+                loanInfo.setStatus((String) statusMap.get("status"));
+                loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
+
+                userRepository.save(existingUser);
+            } else {
+                Map statusMap = (getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails));
+                userPersonalDetails.setScore((Integer)statusMap.get("score"));
+                loanInfo.setStatus((String) statusMap.get("status"));
+                loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
+
+                userPersonalDetails.setEmploymentDetails(employmentDetails);
+                employmentDetails.setUser(userPersonalDetails);
+
+                userPersonalDetails.setLoanInfos(List.of(loanInfo));
+                loanInfo.setUser(userPersonalDetails);
+
+                userRepository.save(userPersonalDetails);
+            }
             return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
-
-//            String userSsn = userPersonalDetails.getSsnNumber();
-//            Optional<User> existingUserOpt = userRepository.findBySsnNumber(userSsn);
-//
-//
-//
-//            if (existingUserOpt.isPresent()) {
-//                User existingUser = existingUserOpt.get();
-//                Long existingEmploymentId = existingUser.getEmploymentDetails().getId();
-//                employmentDetails.setId(existingEmploymentId);
-//
-//                existingUser.updateFrom(userPersonalDetails);
-//                existingUser.setEmploymentDetails(employmentDetails);
-//                employmentDetails.setUser(existingUser);
-//
-//                loanInfo.setUser(existingUser);
-//                existingUser.getLoanInfos().add(loanInfo);
-//
-//                Map statusMap = getStatusFromModel(existingUser,loanInfo,employmentDetails);
-//                existingUser.setScore((Integer)statusMap.get("score"));
-//                loanInfo.setStatus((String) statusMap.get("status"));
-//                loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
-//
-//                userRepository.save(existingUser);
-//            } else {
-//
-//
-//                userPersonalDetails.setEmploymentDetails(employmentDetails);
-//                employmentDetails.setUser(userPersonalDetails);
-//
-//                userPersonalDetails.setLoanInfos(List.of(loanInfo));
-//                loanInfo.setUser(userPersonalDetails);
-//
-//                userRepository.save(userPersonalDetails);
-//            }
 
         } catch (Exception e) {
             System.out.println(e);

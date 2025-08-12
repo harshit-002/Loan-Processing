@@ -44,6 +44,10 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private EmploymentDetails employmentDetails;
 
+    @OneToOne
+    @JoinColumn(name="account_id")
+    private Account account;
+
     public void updateFrom(User incomingUser) {
         this.firstName = incomingUser.firstName;
         this.middleName = incomingUser.middleName;
