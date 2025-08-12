@@ -16,6 +16,7 @@ public class UserDTO {
     private LocalDate dateOfBirth;
     private String maritalStatus;
     private String ssnNumber;
+    private Integer score;
     private Address address;
     private ContactInfo contactInfo;
     private List<LoanInfoDTO> applications;

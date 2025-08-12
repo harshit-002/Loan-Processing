@@ -23,6 +23,7 @@ public class ApplicationInfoMapper {
         dto.setDateOfBirth(user.getDateOfBirth());
         dto.setMaritalStatus(user.getMaritalStatus());
         dto.setSsnNumber(user.getSsnNumber());
+        dto.setScore(user.getScore());
         dto.setAddress(user.getAddress());
         dto.setContactInfo(user.getContactInfo());
         return dto;
@@ -39,6 +40,7 @@ public class ApplicationInfoMapper {
         dto.setApplicationDate(loanInfo.getLoanApplicationDate());
         dto.setDescription(loanInfo.getDescription());
         dto.setStatus(loanInfo.getStatus());
+        dto.setDeclineReason(loanInfo.getDeclineReason());
         return dto;
     }
 

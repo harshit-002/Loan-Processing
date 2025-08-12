@@ -11,4 +11,5 @@ public class LoanInfoDTO {
     private LocalDate applicationDate;
     private String description;
     private String status;
+    private String declineReason;
 }

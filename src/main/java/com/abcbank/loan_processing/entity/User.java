@@ -24,6 +24,7 @@ public class User {
     private LocalDate dateOfBirth;
     private String maritalStatus;
     private String ssnNumber;
+    private Integer score;
 
     @Embedded
     private Address address;

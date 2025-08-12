@@ -22,6 +22,7 @@ public class LoanInfo {
     private String description;
 
     private String status = "PENDING";
+    private String declineReason;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

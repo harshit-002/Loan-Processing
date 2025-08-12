@@ -10,6 +10,7 @@ import com.abcbank.loan_processing.repository.LoanInfoRepository;
 import com.abcbank.loan_processing.repository.EmployementDetailsRepository;
 import com.abcbank.loan_processing.repository.UserRepository;
 import com.abcbank.loan_processing.util.ApplicationInfoMapper;
+import com.abcbank.loan_processing.util.FeatureExtracter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -33,6 +35,24 @@ public class ApplicationService {
     @Autowired
     private ApplicationInfoMapper applicationInfoMapper;
 
+    @Autowired
+    private FeatureExtracter featureExtracter;
+
+    @Autowired
+    private MlService mlService;
+    
+    public Map<String,Object> getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails employmentDetails){
+        double[] features = featureExtracter.extractFeaturesFromApplication(loanInfo,employmentDetails,user);
+        Map<String, Object> mlResponse = mlService.getPrediction(features);
+        Integer score = (Integer) mlResponse.get("score");
+        String declineReason = (String) mlResponse.get("declineReason");
+
+        if(score==-1) return Map.of("score", score,"status","Pending","declineReason","Pending");
+
+        if(score>700) return  Map.of("score", score,"status","Approved","declineReason",declineReason);
+        return  Map.of("score", score,"status","Declined","declineReason",declineReason);
+    }
+
     public ResponseEntity<ApiResponse<String>> submitApplication(LoanApplication loanApplication) {
         try {
             User user = loanApplication.getUser();
@@ -43,7 +63,6 @@ public class ApplicationService {
             Optional<User> existingUserOpt = userRepository.findBySsnNumber(userSsn);
 
             loanInfo.setLoanApplicationDate(LocalDate.now());
-
             if (existingUserOpt.isPresent()) {
                 User existingUser = existingUserOpt.get();
                 Long existingEmploymentId = existingUser.getEmploymentDetails().getId();
@@ -55,8 +74,19 @@ public class ApplicationService {
 
                 loanInfo.setUser(existingUser);
                 existingUser.getLoanInfos().add(loanInfo);
+
+                Map statusMap = getStatusFromModel(existingUser,loanInfo,employmentDetails);
+                existingUser.setScore((Integer)statusMap.get("score"));
+                loanInfo.setStatus((String) statusMap.get("status"));
+                loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
+
                 userRepository.save(existingUser);
             } else {
+                Map statusMap = (getStatusFromModel(user,loanInfo,employmentDetails));
+                user.setScore((Integer)statusMap.get("score"));
+                loanInfo.setStatus((String) statusMap.get("status"));
+                loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
+
                 user.setEmploymentDetails(employmentDetails);
                 employmentDetails.setUser(user);
 
@@ -65,10 +95,10 @@ public class ApplicationService {
 
                 userRepository.save(user);
             }
-
             return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
 
         } catch (Exception e) {
+            System.out.println(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Internal Server Error: Unable to submit application", null));
         }
