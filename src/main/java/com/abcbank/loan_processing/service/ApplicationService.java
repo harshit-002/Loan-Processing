@@ -18,9 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class ApplicationService {
@@ -61,68 +59,51 @@ public class ApplicationService {
         try {
             SecurityContext context = SecurityContextHolder.getContext();
             String accUsername = context.getAuthentication().getName();
-            Optional<Account> userAccount = accountRepository.findByUsername(accUsername);
+            Optional<Account> userAccountOpt = accountRepository.findByUsername(accUsername);
 
             User userPersonalDetails = loanApplication.getUser();
             LoanInfo loanInfo = loanApplication.getLoanInfo();
             EmploymentDetails employmentDetails = loanApplication.getEmploymentDetails();
 
             loanInfo.setLoanApplicationDate(LocalDate.now());
+            Account userAccount = userAccountOpt.get();
+            User existingUserDetails = userAccount.getUser();
 
-            if(userAccount.isPresent()) {
-                Long userId = userAccount.get().getUser().getId();
-                userPersonalDetails.setId(userId);
-                userPersonalDetails.setAccount(userAccount.get());
-            }
+            Long userId = existingUserDetails.getId();
+            userPersonalDetails.setId(userId);
+            userPersonalDetails.setAccount(userAccount);
 
-            Map statusMap = (getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails));
+            Map<String,Object> statusMap = (getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails));
             userPersonalDetails.setScore((Integer)statusMap.get("score"));
             loanInfo.setStatus((String) statusMap.get("status"));
             loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
 
-            userPersonalDetails.setEmploymentDetails(employmentDetails);
-            employmentDetails.setUser(userPersonalDetails);
-            userPersonalDetails.setLoanInfos(List.of(loanInfo));
-            loanInfo.setUser(userPersonalDetails);
+            if(existingUserDetails.getSsnNumber()==null){
+                userPersonalDetails.setEmploymentDetails(employmentDetails);
+                employmentDetails.setUser(userPersonalDetails);
+                if (userPersonalDetails.getLoanInfos() == null) {
+                    userPersonalDetails.setLoanInfos(new ArrayList<>());
+                }
+                userPersonalDetails.getLoanInfos().add(loanInfo);
+                loanInfo.setUser(userPersonalDetails);
 
-            userRepository.save(userPersonalDetails);
-            return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
+                userRepository.save(userPersonalDetails);
+                return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
 
-//            String userSsn = userPersonalDetails.getSsnNumber();
-//            Optional<User> existingUserOpt = userRepository.findBySsnNumber(userSsn);
-//
-//
-//
-//            if (existingUserOpt.isPresent()) {
-//                User existingUser = existingUserOpt.get();
-//                Long existingEmploymentId = existingUser.getEmploymentDetails().getId();
-//                employmentDetails.setId(existingEmploymentId);
-//
-//                existingUser.updateFrom(userPersonalDetails);
-//                existingUser.setEmploymentDetails(employmentDetails);
-//                employmentDetails.setUser(existingUser);
-//
-//                loanInfo.setUser(existingUser);
-//                existingUser.getLoanInfos().add(loanInfo);
-//
-//                Map statusMap = getStatusFromModel(existingUser,loanInfo,employmentDetails);
-//                existingUser.setScore((Integer)statusMap.get("score"));
-//                loanInfo.setStatus((String) statusMap.get("status"));
-//                loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
-//
-//                userRepository.save(existingUser);
-//            } else {
-//
-//
-//                userPersonalDetails.setEmploymentDetails(employmentDetails);
-//                employmentDetails.setUser(userPersonalDetails);
-//
-//                userPersonalDetails.setLoanInfos(List.of(loanInfo));
-//                loanInfo.setUser(userPersonalDetails);
-//
-//                userRepository.save(userPersonalDetails);
-//            }
+            }
+            else{
+                Long existingEmploymentId = existingUserDetails.getEmploymentDetails().getId();
+                employmentDetails.setId(existingEmploymentId);
 
+                existingUserDetails.updateFrom(userPersonalDetails);
+                existingUserDetails.setEmploymentDetails(employmentDetails);
+                employmentDetails.setUser(existingUserDetails);
+
+                loanInfo.setUser(existingUserDetails);
+                existingUserDetails.getLoanInfos().add(loanInfo);
+                userRepository.save(existingUserDetails);
+                return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
+            }
         } catch (Exception e) {
             System.out.println(e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -132,32 +113,56 @@ public class ApplicationService {
 
     public ResponseEntity<ApiResponse<List<ApplicationSummary>>> getAllApplications() {
         try {
-            List<ApplicationSummary> applicationList = loanInfoRepository.findAllApplicationSummary();
-            return ResponseEntity.ok(new ApiResponse<>(true, "Applications fetched successfully", applicationList));
+            SecurityContext context = SecurityContextHolder.getContext();
+            String accUsername = context.getAuthentication().getName();
+            Optional<Account> userAccountOpt = accountRepository.findByUsername(accUsername);
+
+            if(userAccountOpt.isPresent()){
+                Long currUserId = userAccountOpt.get().getUser().getId();
+                List<ApplicationSummary> applicationList = loanInfoRepository.findAllApplicationSummary(currUserId);
+                return ResponseEntity.ok(new ApiResponse<>(true, "Applications fetched successfully", applicationList));
+            }
+            else{
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>(false, "Account does not exist with username"+accUsername, null));
+
+            }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Internal Server Error: Please try again later", null));
         }
     }
 
-    public ResponseEntity<ApiResponse<LoanApplicationDTO>> getApplicationById(Long id) {
+    public ResponseEntity<ApiResponse<LoanApplicationDTO>> getApplicationById(Long loanInfoId) {
         try{
-            Optional<LoanInfo> loanInfoOpt = loanInfoRepository.findLoanInfoById(id);
+            SecurityContext context = SecurityContextHolder.getContext();
+            String accUsername = context.getAuthentication().getName();
+            Optional<Account> userAccountOpt = accountRepository.findByUsername(accUsername);
 
-            if (loanInfoOpt.isPresent()) {
-                LoanInfo loanInfo = loanInfoOpt.get();
-                User user = loanInfo.getUser();
-                EmploymentDetails employmentDetails = user.getEmploymentDetails();
+            User currUserDetails = userAccountOpt.get().getUser();
+            List<LoanInfo> match = currUserDetails.getLoanInfos().stream().filter(loanInfo -> loanInfo.getId().equals(loanInfoId)).toList();
 
-                LoanInfoDTO loanInfoDTO = applicationInfoMapper.toLoanInfoDTO(loanInfo);
-                UserDTO userDTO = applicationInfoMapper.toUserDTO(user);
-                EmploymentDetailsDTO employmentDetailsDTO = applicationInfoMapper.toEmploymentDetailsDTO(employmentDetails);
+            if(!match.isEmpty()){
+                Optional<LoanInfo> loanInfoOpt = loanInfoRepository.findLoanInfoById(loanInfoId);
 
-                LoanApplicationDTO loanApplicationDTO = new LoanApplicationDTO(userDTO, loanInfoDTO,employmentDetailsDTO);
-                return ResponseEntity.ok(new ApiResponse<>(true,"Application found",loanApplicationDTO));
+                if (loanInfoOpt.isPresent()) {
+                    LoanInfo loanInfo = loanInfoOpt.get();
+                    User user = loanInfo.getUser();
+                    EmploymentDetails employmentDetails = user.getEmploymentDetails();
+
+                    LoanInfoDTO loanInfoDTO = applicationInfoMapper.toLoanInfoDTO(loanInfo);
+                    UserDTO userDTO = applicationInfoMapper.toUserDTO(user);
+                    EmploymentDetailsDTO employmentDetailsDTO = applicationInfoMapper.toEmploymentDetailsDTO(employmentDetails);
+
+                    LoanApplicationDTO loanApplicationDTO = new LoanApplicationDTO(userDTO, loanInfoDTO,employmentDetailsDTO);
+                    return ResponseEntity.ok(new ApiResponse<>(true,"Application found",loanApplicationDTO));
+                }
+                else{
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(false,"Application not found",null));
+                }
             }
             else{
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiResponse<>(false,"Application not found",null));
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiResponse<>(false,"Access denied",null));
             }
         }
         catch (Exception e){
