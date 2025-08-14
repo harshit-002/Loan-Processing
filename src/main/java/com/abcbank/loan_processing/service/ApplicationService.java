@@ -42,17 +42,13 @@ public class ApplicationService {
 
     @Autowired
     private AccountRepository accountRepository;
-    
-    public Map<String,Object> getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails employmentDetails){
-        double[] features = featureExtracter.extractFeaturesFromApplication(loanInfo,employmentDetails,user);
-        Map<String, Object> mlResponse = mlService.getPrediction(features);
-        Integer score = (Integer) mlResponse.get("score");
-        String declineReason = (String) mlResponse.get("declineReason");
 
-        if(score==-1) return Map.of("score", score,"status","Pending","declineReason","Pending");
+    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo,EmploymentDetails empDetails){
+        MLPredictionRequestDTO req = new MLPredictionRequestDTO(
+                user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary());
+        MLPredictionResponseDTO mlApiResponse = mlService.getPrediction(req);
 
-        if(score>700) return  Map.of("score", score,"status","Approved","declineReason",declineReason);
-        return  Map.of("score", score,"status","Declined","declineReason",declineReason);
+        return mlApiResponse;
     }
 
     public ResponseEntity<ApiResponse<String>> submitApplication(LoanApplication loanApplication) {
@@ -73,10 +69,12 @@ public class ApplicationService {
             userPersonalDetails.setId(userId);
             userPersonalDetails.setAccount(userAccount);
 
-            Map<String,Object> statusMap = (getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails));
-            userPersonalDetails.setScore((Integer)statusMap.get("score"));
-            loanInfo.setStatus((String) statusMap.get("status"));
-            loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
+            MLPredictionResponseDTO MlApiResponse = getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails);
+
+            loanInfo.setRetryCount(1);
+            userPersonalDetails.setScore((Integer)MlApiResponse.getScore());
+            loanInfo.setStatus((String) MlApiResponse.getStatus());
+            loanInfo.setDeclineReason((String)MlApiResponse.getDeclineReason());
 
             if(existingUserDetails.getSsnNumber()==null){
                 userPersonalDetails.setEmploymentDetails(employmentDetails);

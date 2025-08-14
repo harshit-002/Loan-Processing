@@ -19,4 +19,6 @@ public interface LoanInfoRepository extends JpaRepository<LoanInfo,Long> {
     List<ApplicationSummary> findAllApplicationSummary(@Param("id") Long id);
 
     Optional<LoanInfo> findLoanInfoById(Long id);
+
+    List<LoanInfo> findByStatus(String status);
 }
