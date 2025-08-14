@@ -14,24 +14,23 @@ public class AccountService {
     @Autowired
     AccountRepository accountRepository;
 
-    @Autowired
-    UserRepository userRepository;
-
     private final BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
 
     public ResponseEntity<String> register(Account account){
+        if( accountRepository.findBySsnNumber(account.getSsnNumber()).isPresent()){
+            return ResponseEntity.badRequest().body("User already exists with ssn: "+ account.getSsnNumber());
+        }
          if (accountRepository.findByUsername(account.getUsername()).isPresent()) {
                 return ResponseEntity.badRequest().body("Username already exists");
-            }
+         }
 
-            account.setPassword(bCryptPasswordEncoder.encode(account.getPassword()));
-            account.setPassword(account.getPassword());
+        account.setPassword(bCryptPasswordEncoder.encode(account.getPassword()));
 
-            User user = new User();
-            account.setUser(user);
-            user.setAccount(account);
+        User user = new User();
+        account.setUser(user);
+        user.setAccount(account);
 
-            accountRepository.save(account);
-            return ResponseEntity.ok("Account created");
+        accountRepository.save(account);
+        return ResponseEntity.ok("Account created");
         }
 }

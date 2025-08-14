@@ -1,9 +1,8 @@
 package com.abcbank.loan_processing.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.abcbank.loan_processing.dto.MLPredictionRequestDTO;
+import com.abcbank.loan_processing.dto.MLPredictionResponseDTO;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -16,17 +15,19 @@ public class healthCheck {
     }
 
     @PostMapping("/predict")
-    public Map<String, Object> getPrediction(){
-        Map<String, Object> mockResponse = Map.of(
-                "score", 700,
-                "declineReason","poor u, lol"
+    public MLPredictionResponseDTO getPrediction(@RequestBody MLPredictionRequestDTO requestDTO){
+        MLPredictionResponseDTO mockResponse = new MLPredictionResponseDTO(
+                750,
+                "Approved",
+                "none"
         );
-        try {
-            // Simulate processing delay — 5 seconds
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+        System.out.println("request to ml api: "+ requestDTO);
+//        try {
+//            // Simulate processing delay — 5 seconds
+//            Thread.sleep(2000);
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//        }
         return mockResponse;
     }
 }

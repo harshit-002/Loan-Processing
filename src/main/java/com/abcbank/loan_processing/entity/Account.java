@@ -17,8 +17,15 @@ public class Account {
     private Long Id;
 
     @Nonnull
+    @Column(unique = true, nullable = false)
     private String username;
 
+    @Nonnull
+    @Column(unique = true, nullable = false)
+    private String ssnNumber;
+
+    @Nonnull
+    @Column(unique = true, nullable = false)
     private String password;
 
     @OneToOne(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)

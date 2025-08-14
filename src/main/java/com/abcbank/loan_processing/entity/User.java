@@ -54,6 +54,7 @@ public class User {
         this.lastName = incomingUser.lastName;
         this.dateOfBirth = incomingUser.dateOfBirth;
         this.maritalStatus = incomingUser.maritalStatus;
+        this.ssnNumber = incomingUser.ssnNumber;
 
         if (this.contactInfo == null) {
             this.contactInfo = new ContactInfo();

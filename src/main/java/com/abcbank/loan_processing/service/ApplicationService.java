@@ -43,17 +43,13 @@ public class ApplicationService {
 
     @Autowired
     private AccountRepository accountRepository;
-    
-    public Map<String,Object> getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails employmentDetails){
-        double[] features = featureExtracter.extractFeaturesFromApplication(loanInfo,employmentDetails,user);
-        Map<String, Object> mlResponse = mlService.getPrediction(features);
-        Integer score = (Integer) mlResponse.get("score");
-        String declineReason = (String) mlResponse.get("declineReason");
 
-        if(score==-1) return Map.of("score", score,"status","Pending","declineReason","Pending");
+    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo,EmploymentDetails empDetails){
+        MLPredictionRequestDTO req = new MLPredictionRequestDTO(
+                user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary());
+        MLPredictionResponseDTO mlApiResponse = mlService.getPrediction(req);
 
-        if(score>700) return  Map.of("score", score,"status","Approved","declineReason",declineReason);
-        return  Map.of("score", score,"status","Declined","declineReason",declineReason);
+        return mlApiResponse;
     }
 
     @Transactional
@@ -69,7 +65,7 @@ public class ApplicationService {
             Account userAccount = accountRepository.findByUsername(accUsername)
                     .orElseThrow(() -> new IllegalStateException("Account not found: " + accUsername));
 
-            // 2) Defensive null-safe extraction from DTOs
+            // 2) null-safe extraction from DTOs
             User incomingUser            = Optional.ofNullable(loanApplication.getUser()).orElseGet(User::new);
             LoanInfo incomingLoanInfo    = Optional.ofNullable(loanApplication.getLoanInfo()).orElseGet(LoanInfo::new);
             EmploymentDetails incomingEd = Optional.ofNullable(loanApplication.getEmploymentDetails()).orElseGet(EmploymentDetails::new);
@@ -81,35 +77,38 @@ public class ApplicationService {
                 existing.setAccount(userAccount);
             }
 
-            // 4) Copy/update simple fields (don’t clobber relationships)
-            existing.updateFrom(incomingUser);      // your method that copies primitives
+            if(! incomingUser.getSsnNumber().equals(userAccount.getSsnNumber())){
+                return ResponseEntity
+                        .status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>(false, "SSN number does not match our records. Enter your ssn number", null));
+            }
+
+            // 4) Copy/update simple fields
+            existing.updateFrom(incomingUser);
 
             // 5) EmploymentDetails: update-if-exists, else create
             if (existing.getEmploymentDetails() != null) {
-                // keep same row, just update values
                 incomingEd.setId(existing.getEmploymentDetails().getId());
             }
             existing.setEmploymentDetails(incomingEd);
             incomingEd.setUser(existing);
 
-            // 6) LoanInfo: always create a new loan record for a new submission
-            // (avoid trusting client-provided IDs like 0)
+            // 6) LoanInfo: create a new loan record for a new submission
             incomingLoanInfo.setId(null);
             incomingLoanInfo.setUser(existing);
-            incomingLoanInfo.setLoanApplicationDate(LocalDate.now()); // server truth
+            incomingLoanInfo.setLoanApplicationDate(LocalDate.now());
+            MLPredictionResponseDTO MlApiResponse = getStatusFromModel(existing,incomingLoanInfo,incomingEd);
+
+            incomingLoanInfo.setRetryCount(1);
+            existing.setScore((Integer)MlApiResponse.getScore());
+            incomingLoanInfo.setStatus((String) MlApiResponse.getStatus());
+            incomingLoanInfo.setDeclineReason((String)MlApiResponse.getDeclineReason());
 
             if (existing.getLoanInfos() == null) {
                 existing.setLoanInfos(new ArrayList<>());
             }
             existing.getLoanInfos().add(incomingLoanInfo);
 
-            // 7) Scoring/model
-            Map<String,Object> statusMap = getStatusFromModel(existing, incomingLoanInfo, incomingEd);
-            existing.setScore((Integer) statusMap.get("score"));
-            incomingLoanInfo.setStatus((String) statusMap.get("status"));
-            incomingLoanInfo.setDeclineReason((String) statusMap.get("declineReason"));
-
-            // 8) Persist root (requires cascade on child relations)
             userRepository.save(existing);
 
             return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
