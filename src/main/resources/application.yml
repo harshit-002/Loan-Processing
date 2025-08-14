@@ -1,0 +1,7 @@
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        secure: false          # dev over http
+        same-site: lax         # safe for localhost dev

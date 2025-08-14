@@ -43,11 +43,10 @@ public class LoanApplicationRetryService {
         MLPredictionRequestDTO req = new MLPredictionRequestDTO(
                 user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary());
         MLPredictionResponseDTO mlApiResponse = mlService.getPrediction(req);
-
         return mlApiResponse;
     }
     @Transactional
-    @Scheduled(fixedRate = 60000)
+//    @Scheduled(fixedRate = 60000)
     public void retryPendingApplications(){
         logger.info("Retyring pending applications, Time: ", LocalDate.now());
         List<LoanInfo> pendingList = loanInfoRepository.findByStatus("Pending");

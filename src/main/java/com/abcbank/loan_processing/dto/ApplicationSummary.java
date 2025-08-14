@@ -10,13 +10,13 @@ import java.time.LocalDate;
 public class ApplicationSummary {
     private Long id;
     private String name;
-    private LocalDate LoanApplicationDate;
+    private LocalDate loanApplicationDate;
     private String status;
 
     public ApplicationSummary(Long id, String name, String status, LocalDate loanApplicationDate) {
         this.id = id;
         this.name = name;
         this.status = status;
-        this.LoanApplicationDate = loanApplicationDate;
+        this.loanApplicationDate = loanApplicationDate;
     }
 }
