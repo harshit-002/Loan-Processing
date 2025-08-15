@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Service;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.time.LocalDate;
@@ -55,57 +56,65 @@ public class ApplicationService {
         return  Map.of("score", score,"status","Declined","declineReason",declineReason);
     }
 
+    @Transactional
     public ResponseEntity<ApiResponse<String>> submitApplication(LoanApplication loanApplication) {
         try {
-            SecurityContext context = SecurityContextHolder.getContext();
-            String accUsername = context.getAuthentication().getName();
-            Optional<Account> userAccountOpt = accountRepository.findByUsername(accUsername);
-
-            User userPersonalDetails = loanApplication.getUser();
-            LoanInfo loanInfo = loanApplication.getLoanInfo();
-            EmploymentDetails employmentDetails = loanApplication.getEmploymentDetails();
-
-            loanInfo.setLoanApplicationDate(LocalDate.now());
-            Account userAccount = userAccountOpt.get();
-            User existingUserDetails = userAccount.getUser();
-
-            Long userId = existingUserDetails.getId();
-            userPersonalDetails.setId(userId);
-            userPersonalDetails.setAccount(userAccount);
-
-            Map<String,Object> statusMap = (getStatusFromModel(userPersonalDetails,loanInfo,employmentDetails));
-            userPersonalDetails.setScore((Integer)statusMap.get("score"));
-            loanInfo.setStatus((String) statusMap.get("status"));
-            loanInfo.setDeclineReason((String)statusMap.get("declineReason"));
-
-            if(existingUserDetails.getSsnNumber()==null){
-                userPersonalDetails.setEmploymentDetails(employmentDetails);
-                employmentDetails.setUser(userPersonalDetails);
-                if (userPersonalDetails.getLoanInfos() == null) {
-                    userPersonalDetails.setLoanInfos(new ArrayList<>());
-                }
-                userPersonalDetails.getLoanInfos().add(loanInfo);
-                loanInfo.setUser(userPersonalDetails);
-
-                userRepository.save(userPersonalDetails);
-                return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
-
+            // 1) Auth & account
+            var auth = SecurityContextHolder.getContext().getAuthentication();
+            if (auth == null || !auth.isAuthenticated()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(new ApiResponse<>(false, "Not authenticated", null));
             }
-            else{
-                Long existingEmploymentId = existingUserDetails.getEmploymentDetails().getId();
-                employmentDetails.setId(existingEmploymentId);
+            String accUsername = auth.getName();
+            Account userAccount = accountRepository.findByUsername(accUsername)
+                    .orElseThrow(() -> new IllegalStateException("Account not found: " + accUsername));
 
-                existingUserDetails.updateFrom(userPersonalDetails);
-                existingUserDetails.setEmploymentDetails(employmentDetails);
-                employmentDetails.setUser(existingUserDetails);
+            // 2) Defensive null-safe extraction from DTOs
+            User incomingUser            = Optional.ofNullable(loanApplication.getUser()).orElseGet(User::new);
+            LoanInfo incomingLoanInfo    = Optional.ofNullable(loanApplication.getLoanInfo()).orElseGet(LoanInfo::new);
+            EmploymentDetails incomingEd = Optional.ofNullable(loanApplication.getEmploymentDetails()).orElseGet(EmploymentDetails::new);
 
-                loanInfo.setUser(existingUserDetails);
-                existingUserDetails.getLoanInfos().add(loanInfo);
-                userRepository.save(existingUserDetails);
-                return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
+            // 3) Attach/prepare aggregate root
+            User existing = userAccount.getUser();
+            if (existing == null) {                 // first application for this account
+                existing = new User();
+                existing.setAccount(userAccount);
             }
+
+            // 4) Copy/update simple fields (don’t clobber relationships)
+            existing.updateFrom(incomingUser);      // your method that copies primitives
+
+            // 5) EmploymentDetails: update-if-exists, else create
+            if (existing.getEmploymentDetails() != null) {
+                // keep same row, just update values
+                incomingEd.setId(existing.getEmploymentDetails().getId());
+            }
+            existing.setEmploymentDetails(incomingEd);
+            incomingEd.setUser(existing);
+
+            // 6) LoanInfo: always create a new loan record for a new submission
+            // (avoid trusting client-provided IDs like 0)
+            incomingLoanInfo.setId(null);
+            incomingLoanInfo.setUser(existing);
+            incomingLoanInfo.setLoanApplicationDate(LocalDate.now()); // server truth
+
+            if (existing.getLoanInfos() == null) {
+                existing.setLoanInfos(new ArrayList<>());
+            }
+            existing.getLoanInfos().add(incomingLoanInfo);
+
+            // 7) Scoring/model
+            Map<String,Object> statusMap = getStatusFromModel(existing, incomingLoanInfo, incomingEd);
+            existing.setScore((Integer) statusMap.get("score"));
+            incomingLoanInfo.setStatus((String) statusMap.get("status"));
+            incomingLoanInfo.setDeclineReason((String) statusMap.get("declineReason"));
+
+            // 8) Persist root (requires cascade on child relations)
+            userRepository.save(existing);
+
+            return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
         } catch (Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Internal Server Error: Unable to submit application", null));
         }

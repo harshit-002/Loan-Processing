@@ -1,5 +1,6 @@
 package com.abcbank.loan_processing.config;
 
+
 import com.abcbank.loan_processing.repository.AccountRepository;
 import com.abcbank.loan_processing.service.AccountDetailsServiceImpl;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,6 +16,13 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.config.Customizer;
+import org.springframework.http.HttpMethod;
+
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -42,27 +50,57 @@ public class SpringSecurity {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http.authorizeHttpRequests(
-                        request ->
-                                request.requestMatchers("/api/auth/**","/api/public/**").permitAll()
-                                        .requestMatchers("/api/**").authenticated()
-                                        .anyRequest().authenticated())
-                .formLogin(form -> form
-                        .loginProcessingUrl("/login")
-                        .successHandler((request, response, authentication) -> {
-                            response.setStatus(HttpServletResponse.SC_OK);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"message\": \"Login successful\"}");
+        return http
+                .cors(Customizer.withDefaults())
+                .csrf(AbstractHttpConfigurer::disable)
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().permitAll()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> {
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"UNAUTHORIZED\"}");
                         })
-                        .failureHandler((request, response, exception) -> {
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("application/json");
-                            response.getWriter().write("{\"message\": \"Login failed\"}");
+                        .accessDeniedHandler((req, res, e) -> {
+                            res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"error\":\"FORBIDDEN\"}");
                         })
                 )
-                .csrf(AbstractHttpConfigurer::disable)
+                .formLogin(form -> form
+                        .loginProcessingUrl("/api/auth/login")   // <--- move under /api
+                        .successHandler((req, res, auth) -> {
+                            res.setStatus(HttpServletResponse.SC_OK);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"message\":\"Login successful\"}");
+                        })
+                        .failureHandler((req, res, ex) -> {
+                            res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"message\":\"Login failed\"}");
+                        })
+                        .permitAll()
+                )
                 .userDetailsService(accountDetailService())
                 .build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowCredentials(true);
+        config.setAllowedOrigins(List.of("http://localhost:4200"));
+        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
+        config.setAllowedHeaders(List.of("*")); // allow all headers
+        config.setExposedHeaders(List.of("Authorization"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config); // <-- not just "/"
+        return source;
     }
 
     @Bean
