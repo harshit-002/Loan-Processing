@@ -1,12 +1,9 @@
 package com.abcbank.loan_processing.service;
 
-import com.abcbank.loan_processing.common.ApiResponse;
+import com.abcbank.loan_processing.dto.ApiResponse;
 import com.abcbank.loan_processing.dto.*;
 import com.abcbank.loan_processing.entity.*;
-import com.abcbank.loan_processing.repository.AccountRepository;
-import com.abcbank.loan_processing.repository.LoanInfoRepository;
-import com.abcbank.loan_processing.repository.EmployementDetailsRepository;
-import com.abcbank.loan_processing.repository.UserRepository;
+import com.abcbank.loan_processing.repository.*;
 import com.abcbank.loan_processing.util.ApplicationInfoMapper;
 import com.abcbank.loan_processing.util.FeatureExtracter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,7 +11,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.stereotype.Service;
-import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -44,13 +40,6 @@ public class ApplicationService {
     @Autowired
     private AccountRepository accountRepository;
 
-    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo,EmploymentDetails empDetails){
-        MLPredictionRequestDTO req = new MLPredictionRequestDTO(
-                user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary());
-        MLPredictionResponseDTO mlApiResponse = mlService.getPrediction(req);
-
-        return mlApiResponse;
-    }
 
     @Transactional
     public ResponseEntity<ApiResponse<String>> submitApplication(LoanApplication loanApplication) {
@@ -97,7 +86,7 @@ public class ApplicationService {
             incomingLoanInfo.setId(null);
             incomingLoanInfo.setUser(existing);
             incomingLoanInfo.setLoanApplicationDate(LocalDate.now());
-            MLPredictionResponseDTO MlApiResponse = getStatusFromModel(existing,incomingLoanInfo,incomingEd);
+            MLPredictionResponseDTO MlApiResponse = mlService.getStatusFromModel(existing,incomingLoanInfo,incomingEd);
 
             incomingLoanInfo.setRetryCount(1);
             existing.setScore((Integer)MlApiResponse.getScore());

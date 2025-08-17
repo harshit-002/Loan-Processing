@@ -1,11 +1,10 @@
 package com.abcbank.loan_processing.dto;
 
+import com.abcbank.loan_processing.entity.CreditBureau;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 
 @AllArgsConstructor
 @Data
@@ -16,4 +15,6 @@ public class MLPredictionRequestDTO {
     private String description;
     private Integer experienceYears;
     private BigDecimal annualSalary;
+
+    private CreditBureau creditBureau;
 }

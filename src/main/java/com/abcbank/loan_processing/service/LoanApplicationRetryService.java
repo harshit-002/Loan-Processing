@@ -39,14 +39,6 @@ public class LoanApplicationRetryService {
     @Autowired
     private MlService mlService;
 
-    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo){
-        EmploymentDetails empDetails = user.getEmploymentDetails();
-        MLPredictionRequestDTO req = new MLPredictionRequestDTO(
-                user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary());
-        MLPredictionResponseDTO mlApiResponse = mlService.getPrediction(req);
-
-        return mlApiResponse;
-    }
     @Transactional
     @Scheduled(fixedRate = 600000) // retry every 60 min
     public void retryPendingApplications(){
@@ -61,7 +53,7 @@ public class LoanApplicationRetryService {
                 User currUserDetails = loan.getUser();
                 EmploymentDetails currUserEmpDetails = currUserDetails.getEmploymentDetails();
 
-                MLPredictionResponseDTO MlApiResponse = getStatusFromModel(currUserDetails,loan);
+                MLPredictionResponseDTO MlApiResponse = mlService.getStatusFromModel(currUserDetails,loan,currUserEmpDetails);
 
                 currUserDetails.setScore((Integer)MlApiResponse.getScore());
                 loan.setStatus((String) MlApiResponse.getStatus());

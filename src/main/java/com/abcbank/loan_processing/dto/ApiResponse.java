@@ -1,4 +1,4 @@
-package com.abcbank.loan_processing.common;
+package com.abcbank.loan_processing.dto;
 
 import lombok.*;
 

@@ -1,27 +1,47 @@
 package com.abcbank.loan_processing.service;
+import com.abcbank.loan_processing.entity.CreditBureau;
 import com.abcbank.loan_processing.dto.MLPredictionRequestDTO;
 import com.abcbank.loan_processing.dto.MLPredictionResponseDTO;
+import com.abcbank.loan_processing.entity.EmploymentDetails;
+import com.abcbank.loan_processing.entity.LoanInfo;
+import com.abcbank.loan_processing.entity.User;
+import com.abcbank.loan_processing.repository.CreditBureauRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class MlService {
     private static final Logger logger = LoggerFactory.getLogger(MlService.class);
+    @Autowired
+    private CreditBureauRepository creditBureauRepository;
 
     private final String mlApiUrl = "http://localhost:8080/api/public/predict";
 
+    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails empDetails){
+        Optional<CreditBureau> creditBureauDataOpt = creditBureauRepository.findById(user.getSsnNumber());
+        CreditBureau creditBureauData = null;
+
+        if(creditBureauDataOpt.isPresent()){
+            creditBureauData = creditBureauDataOpt.get();
+        }
+        MLPredictionRequestDTO req = new MLPredictionRequestDTO(
+                user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary(),creditBureauData);
+        MLPredictionResponseDTO mlApiResponse = this.getPrediction(req);
+
+        return mlApiResponse;
+    }
     public MLPredictionResponseDTO getPrediction(MLPredictionRequestDTO requestDto) {
-        // Create RestTemplate with 4-second timeout
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(4000);
-        requestFactory.setReadTimeout(4000);
+        requestFactory.setConnectTimeout(2000);
+        requestFactory.setReadTimeout(2000);
         RestTemplate timeoutRestTemplate = new RestTemplate(requestFactory);
 
         HttpHeaders headers = new HttpHeaders();
