@@ -1,6 +1,5 @@
 package com.abcbank.loan_processing.service;
 
-import com.abcbank.loan_processing.dto.ApiResponse;
 import com.abcbank.loan_processing.dto.*;
 import com.abcbank.loan_processing.entity.*;
 import com.abcbank.loan_processing.repository.*;
@@ -111,7 +110,7 @@ public class ApplicationService {
         }
     }
 
-    public ResponseEntity<ApiResponse<List<ApplicationSummary>>> getAllApplications() {
+    public ResponseEntity<ApiResponse<List<ApplicationSummaryDTO>>> getAllApplications() {
         try {
             SecurityContext context = SecurityContextHolder.getContext();
             String accUsername = context.getAuthentication().getName();
@@ -119,13 +118,12 @@ public class ApplicationService {
 
             if(userAccountOpt.isPresent()){
                 Long currUserId = userAccountOpt.get().getUser().getId();
-                List<ApplicationSummary> applicationList = loanInfoRepository.findAllApplicationSummary(currUserId);
+                List<ApplicationSummaryDTO> applicationList = loanInfoRepository.findAllApplicationSummary(currUserId);
                 return ResponseEntity.ok(new ApiResponse<>(true, "Applications fetched successfully", applicationList));
             }
             else{
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(new ApiResponse<>(false, "Account does not exist with username"+accUsername, null));
-
             }
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -139,6 +137,10 @@ public class ApplicationService {
             String accUsername = context.getAuthentication().getName();
             Optional<Account> userAccountOpt = accountRepository.findByUsername(accUsername);
 
+            if(userAccountOpt.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(new ApiResponse<>(false, "Account does not exist with username"+accUsername, null));
+            }
             User currUserDetails = userAccountOpt.get().getUser();
             List<LoanInfo> match = currUserDetails.getLoanInfos().stream().filter(loanInfo -> loanInfo.getId().equals(loanInfoId)).toList();
 
