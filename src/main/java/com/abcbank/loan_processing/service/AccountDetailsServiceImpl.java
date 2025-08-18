@@ -24,13 +24,10 @@ public class AccountDetailsServiceImpl implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         try {
-//            System.out.println("Attempting login for username: " + username);
             Optional<Account> currAccount = accountRepository.findByUsername(username);
             if(currAccount.isPresent()){
-//                System.out.println("account found: " + username);
                 return new AccountPrincipal(currAccount.get());
             }
-//            System.out.println("account not found: " + username);
             throw new UsernameNotFoundException("Account not found with username: " + username);
         }
         catch (UsernameNotFoundException e){

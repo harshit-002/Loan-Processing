@@ -18,8 +18,8 @@ public class AuthController {
     AccountService accountService;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody Account account) {
-        return accountService.register(account);
+    public ResponseEntity<String> register(HttpServletRequest request,@RequestBody Account account) {
+        return accountService.register(request,account);
     }
 
     @PostMapping("/logout")
