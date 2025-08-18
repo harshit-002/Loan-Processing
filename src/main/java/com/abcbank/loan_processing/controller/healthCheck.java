@@ -4,6 +4,7 @@ import com.abcbank.loan_processing.dto.MLPredictionRequestDTO;
 import com.abcbank.loan_processing.dto.MLPredictionResponseDTO;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @RequestMapping("/api/public")
@@ -17,9 +18,10 @@ public class healthCheck {
     @PostMapping("/predict")
     public MLPredictionResponseDTO getPrediction(@RequestBody MLPredictionRequestDTO requestDTO){
         MLPredictionResponseDTO mockResponse = new MLPredictionResponseDTO(
-                750,
+                BigDecimal.valueOf(750),
                 "Approved",
-                "none"
+                null,
+                BigDecimal.valueOf(500)
         );
         System.out.println("request to ml api: "+ requestDTO);
 //        try {

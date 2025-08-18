@@ -2,14 +2,26 @@ package com.abcbank.loan_processing.util;
 
 import com.abcbank.loan_processing.dto.LoanInfoDTO;
 import com.abcbank.loan_processing.dto.EmploymentDetailsDTO;
+import com.abcbank.loan_processing.dto.MLPredictionRequestDTO;
 import com.abcbank.loan_processing.dto.UserDTO;
+import com.abcbank.loan_processing.entity.CreditBureau;
 import com.abcbank.loan_processing.entity.LoanInfo;
 import com.abcbank.loan_processing.entity.EmploymentDetails;
 import com.abcbank.loan_processing.entity.User;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+
 @Component
-public class ApplicationInfoMapper {
+public class Mapper {
+    private static final Map<String, String> PURPOSE_MAP = Map.of(
+            "Home Loan", "Home_Loan",
+            "Personal Loan", "Personal_Loan",
+            "Debt", "Debt",
+            "Education Loan", "Education_Loan"
+    );
 
     public UserDTO toUserDTO(User user) {
         if (user == null) {
@@ -56,6 +68,36 @@ public class ApplicationInfoMapper {
         dto.setAnnualSalary(employmentDetails.getAnnualSalary());
         dto.setDesignation(employmentDetails.getDesignation());
         dto.setAddress(employmentDetails.getAddress());
+        return dto;
+    }
+
+    public MLPredictionRequestDTO toMlPredictionRequestDTO(LoanInfo loanInfo, EmploymentDetails employmentDetails, CreditBureau creditBureau){
+        MLPredictionRequestDTO dto = new MLPredictionRequestDTO();
+
+        dto.setLoanAmnt(loanInfo.getLoanAmount());
+        dto.setDesc(loanInfo.getDescription());
+        dto.setPurpose(PURPOSE_MAP.get(loanInfo.getLoanPurpose()));
+        dto.setEmpLength(employmentDetails.getExperienceYears());
+        dto.setAnnualInc(employmentDetails.getAnnualSalary());
+
+        if(creditBureau == null) {
+            String dateStr = "12-13-1999";
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
+            LocalDate date = LocalDate.parse(dateStr, formatter);
+            creditBureau = new CreditBureau("",11,1,1,1,1,1, 11L,1.0,1,date);
+        }
+
+        dto.setDelinq2yrs(creditBureau.getDelinq2yrs());
+        dto.setInqLast6mths(creditBureau.getInqLast6mths());
+        dto.setMthsSinceLastDelinq(creditBureau.getMthsSinceLastDelinq());
+        dto.setMthsSinceLastRecord(creditBureau.getMthsSinceLastRecord());
+        dto.setOpenAcc(creditBureau.getOpenAcc());
+        dto.setPubRec(creditBureau.getPubRec());
+        dto.setRevolBal(creditBureau.getRevolBal());
+        dto.setRevolUtil(creditBureau.getRevolUtil());
+        dto.setTotalAcc(creditBureau.getTotalAcc());
+        dto.setEarliestCrLine(creditBureau.getEarliestCrLine());
+
         return dto;
     }
 }

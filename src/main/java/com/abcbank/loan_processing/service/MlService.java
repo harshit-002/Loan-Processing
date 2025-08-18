@@ -6,6 +6,9 @@ import com.abcbank.loan_processing.entity.EmploymentDetails;
 import com.abcbank.loan_processing.entity.LoanInfo;
 import com.abcbank.loan_processing.entity.User;
 import com.abcbank.loan_processing.repository.CreditBureauRepository;
+import com.abcbank.loan_processing.util.Mapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 @Service
@@ -23,43 +27,44 @@ public class MlService {
     @Autowired
     private CreditBureauRepository creditBureauRepository;
 
-    private final String mlApiUrl = "http://localhost:8080/api/public/predict";
+    @Autowired
+    private Mapper mapper;
+    @Autowired
+    private ObjectMapper objectMapper;
+    private final String mlApiUrl = "http://localhost:5000/api/predict";
 
-    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails empDetails){
+    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails empDetails) throws JsonProcessingException {
         Optional<CreditBureau> creditBureauDataOpt = creditBureauRepository.findById(user.getSsnNumber());
         CreditBureau creditBureauData = null;
 
         if(creditBureauDataOpt.isPresent()){
             creditBureauData = creditBureauDataOpt.get();
         }
-        MLPredictionRequestDTO req = new MLPredictionRequestDTO(
-                user.getSsnNumber(),loanInfo.getLoanAmount(),loanInfo.getLoanPurpose(),loanInfo.getDescription(),empDetails.getExperienceYears(),empDetails.getAnnualSalary(),creditBureauData);
-        MLPredictionResponseDTO mlApiResponse = this.getPrediction(req);
+        MLPredictionRequestDTO req = mapper.toMlPredictionRequestDTO(loanInfo,empDetails,creditBureauData);
 
-        return mlApiResponse;
+        return this.getPrediction(req);
     }
-    public MLPredictionResponseDTO getPrediction(MLPredictionRequestDTO requestDto) {
+
+    public MLPredictionResponseDTO getPrediction(MLPredictionRequestDTO requestDto) throws JsonProcessingException {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(2000);
-        requestFactory.setReadTimeout(2000);
+        requestFactory.setConnectTimeout(4000);
+        requestFactory.setReadTimeout(4000);
         RestTemplate timeoutRestTemplate = new RestTemplate(requestFactory);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<MLPredictionRequestDTO> requestEntity = new HttpEntity<>(requestDto, headers);
-
         try {
-            ResponseEntity<MLPredictionResponseDTO> response =
+            ResponseEntity<MLPredictionResponseDTO> rawResponse =
                     timeoutRestTemplate.postForEntity(
                             mlApiUrl,
                             requestEntity,
                             MLPredictionResponseDTO.class
                     );
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                logger.info("ML Api response recieved successfully");
-                return response.getBody();
+            if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null) {
+                logger.info("ML Api response received successfully{}", rawResponse);
+                return rawResponse.getBody();
             }
         } catch (ResourceAccessException e) {
             logger.info("ML API timeout (over 4 sec), returning default response");
@@ -69,9 +74,9 @@ public class MlService {
 
         // Default response if timeout or error
         MLPredictionResponseDTO defaultResponse = new MLPredictionResponseDTO();
-        defaultResponse.setScore(-1);
-        defaultResponse.setDeclineReason("none");
-        defaultResponse.setStatus("Pending");
+        defaultResponse.setScore(BigDecimal.valueOf(-1));
+        defaultResponse.setDeclineReasons(null);
+        defaultResponse.setDecision("Pending");
         return defaultResponse;
     }
 }

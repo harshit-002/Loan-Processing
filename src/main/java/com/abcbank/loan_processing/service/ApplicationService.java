@@ -4,8 +4,7 @@ import com.abcbank.loan_processing.dto.ApiResponse;
 import com.abcbank.loan_processing.dto.*;
 import com.abcbank.loan_processing.entity.*;
 import com.abcbank.loan_processing.repository.*;
-import com.abcbank.loan_processing.util.ApplicationInfoMapper;
-import com.abcbank.loan_processing.util.FeatureExtracter;
+import com.abcbank.loan_processing.util.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,10 +28,8 @@ public class ApplicationService {
     private LoanInfoRepository loanInfoRepository;
 
     @Autowired
-    private ApplicationInfoMapper applicationInfoMapper;
+    private Mapper mapper;
 
-    @Autowired
-    private FeatureExtracter featureExtracter;
 
     @Autowired
     private MlService mlService;
@@ -89,9 +86,12 @@ public class ApplicationService {
             MLPredictionResponseDTO MlApiResponse = mlService.getStatusFromModel(existing,incomingLoanInfo,incomingEd);
 
             incomingLoanInfo.setRetryCount(1);
-            existing.setScore((Integer)MlApiResponse.getScore());
-            incomingLoanInfo.setStatus((String) MlApiResponse.getStatus());
-            incomingLoanInfo.setDeclineReason((String)MlApiResponse.getDeclineReason());
+            existing.setScore(MlApiResponse.getScore().intValue());
+            incomingLoanInfo.setStatus((String) MlApiResponse.getDecision());
+            incomingLoanInfo.setDeclineReason(Optional.ofNullable(MlApiResponse.getDeclineReasons())
+                    .filter(list->!list.isEmpty())
+                    .map(list->list.getFirst().getDescription())
+                    .orElse("None"));
 
             if (existing.getLoanInfos() == null) {
                 existing.setLoanInfos(new ArrayList<>());
@@ -147,9 +147,9 @@ public class ApplicationService {
                     User user = loanInfo.getUser();
                     EmploymentDetails employmentDetails = user.getEmploymentDetails();
 
-                    LoanInfoDTO loanInfoDTO = applicationInfoMapper.toLoanInfoDTO(loanInfo);
-                    UserDTO userDTO = applicationInfoMapper.toUserDTO(user);
-                    EmploymentDetailsDTO employmentDetailsDTO = applicationInfoMapper.toEmploymentDetailsDTO(employmentDetails);
+                    LoanInfoDTO loanInfoDTO = mapper.toLoanInfoDTO(loanInfo);
+                    UserDTO userDTO = mapper.toUserDTO(user);
+                    EmploymentDetailsDTO employmentDetailsDTO = mapper.toEmploymentDetailsDTO(employmentDetails);
 
                     LoanApplicationDTO loanApplicationDTO = new LoanApplicationDTO(userDTO, loanInfoDTO,employmentDetailsDTO);
                     return ResponseEntity.ok(new ApiResponse<>(true,"Application found",loanApplicationDTO));

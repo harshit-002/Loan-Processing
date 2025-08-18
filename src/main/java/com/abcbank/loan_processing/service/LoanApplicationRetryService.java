@@ -1,25 +1,21 @@
 package com.abcbank.loan_processing.service;
 
-import com.abcbank.loan_processing.dto.MLPredictionRequestDTO;
 import com.abcbank.loan_processing.dto.MLPredictionResponseDTO;
 import com.abcbank.loan_processing.entity.EmploymentDetails;
 import com.abcbank.loan_processing.entity.LoanInfo;
 import com.abcbank.loan_processing.entity.User;
 import com.abcbank.loan_processing.repository.LoanInfoRepository;
 import com.abcbank.loan_processing.repository.UserRepository;
-import com.abcbank.loan_processing.util.FeatureExtracter;
 import jakarta.transaction.Transactional;
-import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class LoanApplicationRetryService {
@@ -33,8 +29,6 @@ public class LoanApplicationRetryService {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private FeatureExtracter featureExtracter;
 
     @Autowired
     private MlService mlService;
@@ -42,7 +36,7 @@ public class LoanApplicationRetryService {
     @Transactional
     @Scheduled(fixedRate = 600000) // retry every 60 min
     public void retryPendingApplications(){
-        logger.info("Retyring pending applications, Time: "+ LocalDateTime.now());
+        logger.info("Re-tyring pending applications, Time: {}", LocalDateTime.now());
         List<LoanInfo> pendingList = loanInfoRepository.findByStatus("Pending");
 
         for(LoanInfo loan : pendingList){
@@ -55,9 +49,12 @@ public class LoanApplicationRetryService {
 
                 MLPredictionResponseDTO MlApiResponse = mlService.getStatusFromModel(currUserDetails,loan,currUserEmpDetails);
 
-                currUserDetails.setScore((Integer)MlApiResponse.getScore());
-                loan.setStatus((String) MlApiResponse.getStatus());
-                loan.setDeclineReason((String)MlApiResponse.getDeclineReason());
+                currUserDetails.setScore(MlApiResponse.getScore().intValue());
+                loan.setStatus(MlApiResponse.getDecision());
+                loan.setDeclineReason(Optional.ofNullable(MlApiResponse.getDeclineReasons())
+                                .filter(list->!list.isEmpty())
+                                        .map(list->list.getFirst().getDescription())
+                                                .orElse("none"));
 
                 loan.setRetryCount(loan.getRetryCount()+1);
 
@@ -65,7 +62,7 @@ public class LoanApplicationRetryService {
                 loanInfoRepository.save(loan);
             }
             catch (Exception e) {
-                System.out.println("exception occured: "+e.getMessage());
+                System.out.println("exception occurred: "+e.getMessage());
                 loan.setRetryCount(loan.getRetryCount() + 1);
                 loanInfoRepository.save(loan);
             }
