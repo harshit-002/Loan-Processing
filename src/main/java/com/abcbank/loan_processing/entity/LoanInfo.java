@@ -18,10 +18,13 @@ public class LoanInfo {
     private String loanPurpose;
     private LocalDate loanApplicationDate;
 
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String description;
 
     private String status = "Pending";
+
+    @Lob
     private String declineReason;
     private int retryCount = 0;
 

@@ -56,15 +56,15 @@ public class MlService {
 
         HttpEntity<MLPredictionRequestDTO> requestEntity = new HttpEntity<>(requestDto, headers);
         try {
-            ResponseEntity<MLPredictionResponseDTO> rawResponse =
+            ResponseEntity<MLPredictionResponseDTO> Response =
                     timeoutRestTemplate.postForEntity(
                             mlApiUrl,
                             requestEntity,
                             MLPredictionResponseDTO.class
                     );
-            if (rawResponse.getStatusCode().is2xxSuccessful() && rawResponse.getBody() != null) {
-                logger.info("ML Api response received successfully{}", rawResponse);
-                return rawResponse.getBody();
+            if (Response.getStatusCode().is2xxSuccessful() && Response.getBody() != null) {
+                logger.info("ML Api response received successfully{}", Response);
+                return Response.getBody();
             }
         } catch (ResourceAccessException e) {
             logger.info("ML API timeout (over 4 sec), returning default response");

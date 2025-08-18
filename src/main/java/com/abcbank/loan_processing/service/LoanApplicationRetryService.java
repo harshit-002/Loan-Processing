@@ -6,6 +6,7 @@ import com.abcbank.loan_processing.entity.LoanInfo;
 import com.abcbank.loan_processing.entity.User;
 import com.abcbank.loan_processing.repository.LoanInfoRepository;
 import com.abcbank.loan_processing.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +30,11 @@ public class LoanApplicationRetryService {
     @Autowired
     private UserRepository userRepository;
 
-
     @Autowired
     private MlService mlService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Transactional
     @Scheduled(fixedRate = 600000) // retry every 60 min
@@ -51,11 +54,12 @@ public class LoanApplicationRetryService {
 
                 currUserDetails.setScore(MlApiResponse.getScore().intValue());
                 loan.setStatus(MlApiResponse.getDecision());
-                loan.setDeclineReason(Optional.ofNullable(MlApiResponse.getDeclineReasons())
-                                .filter(list->!list.isEmpty())
-                                        .map(list->list.getFirst().getDescription())
-                                                .orElse("none"));
 
+                String declineReason = "None";
+                if(MlApiResponse.getDeclineReasons()!=null){
+                    declineReason = objectMapper.writeValueAsString(MlApiResponse.getDeclineReasons());
+                }
+                loan.setDeclineReason(declineReason);
                 loan.setRetryCount(loan.getRetryCount()+1);
 
                 userRepository.save(currUserDetails);

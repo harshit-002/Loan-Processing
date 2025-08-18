@@ -5,6 +5,7 @@ import com.abcbank.loan_processing.dto.*;
 import com.abcbank.loan_processing.entity.*;
 import com.abcbank.loan_processing.repository.*;
 import com.abcbank.loan_processing.util.Mapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,13 +31,14 @@ public class ApplicationService {
     @Autowired
     private Mapper mapper;
 
-
     @Autowired
     private MlService mlService;
 
     @Autowired
     private AccountRepository accountRepository;
 
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Transactional
     public ResponseEntity<ApiResponse<String>> submitApplication(LoanApplication loanApplication) {
@@ -85,13 +87,14 @@ public class ApplicationService {
             incomingLoanInfo.setLoanApplicationDate(LocalDate.now());
             MLPredictionResponseDTO MlApiResponse = mlService.getStatusFromModel(existing,incomingLoanInfo,incomingEd);
 
+            String declineReason = "None";
+            if(MlApiResponse.getDeclineReasons()!=null){
+                declineReason = objectMapper.writeValueAsString(MlApiResponse.getDeclineReasons());
+            }
             incomingLoanInfo.setRetryCount(1);
             existing.setScore(MlApiResponse.getScore().intValue());
             incomingLoanInfo.setStatus((String) MlApiResponse.getDecision());
-            incomingLoanInfo.setDeclineReason(Optional.ofNullable(MlApiResponse.getDeclineReasons())
-                    .filter(list->!list.isEmpty())
-                    .map(list->list.getFirst().getDescription())
-                    .orElse("None"));
+            incomingLoanInfo.setDeclineReason(declineReason);
 
             if (existing.getLoanInfos() == null) {
                 existing.setLoanInfos(new ArrayList<>());
