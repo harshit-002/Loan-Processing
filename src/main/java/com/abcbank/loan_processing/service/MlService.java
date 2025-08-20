@@ -63,7 +63,7 @@ public class MlService {
                             MLPredictionResponseDTO.class
                     );
             if (Response.getStatusCode().is2xxSuccessful() && Response.getBody() != null) {
-//                logger.info("ML Api response received successfully{}", Response);
+                logger.info("ML Api response received successfully{}", Response);
                 return Response.getBody();
             }
         } catch (ResourceAccessException e) {

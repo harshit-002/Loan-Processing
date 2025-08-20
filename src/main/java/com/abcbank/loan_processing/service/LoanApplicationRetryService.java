@@ -63,6 +63,7 @@ public class LoanApplicationRetryService {
 
                 userRepository.save(currUserDetails);
                 loanInfoRepository.save(loan);
+                logger.info("Updated loan application status for application with Id: {}",loan.getId());
             }
             catch (Exception e) {
                 logger.error("Exception occurred: {}", e.getMessage());

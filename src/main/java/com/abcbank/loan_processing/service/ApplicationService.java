@@ -5,6 +5,8 @@ import com.abcbank.loan_processing.entity.*;
 import com.abcbank.loan_processing.repository.*;
 import com.abcbank.loan_processing.util.Mapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,8 @@ import java.util.*;
 
 @Service
 public class ApplicationService {
+    private static final Logger logger = LoggerFactory.getLogger(LoanApplicationRetryService.class);
+
     @Autowired
     private UserRepository userRepository;
 
@@ -97,9 +101,10 @@ public class ApplicationService {
             existing.getLoanInfos().add(incomingLoanInfo);
 
             userRepository.save(existing);
-
+            logger.info("Saved loan application in DB");
             return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
         } catch (Exception e) {
+            logger.error("Error saving loan application.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Internal Server Error: Unable to submit application", null));
         }
@@ -114,6 +119,7 @@ public class ApplicationService {
             if(userAccountOpt.isPresent()){
                 Long currUserId = userAccountOpt.get().getUser().getId();
                 List<ApplicationSummaryDTO> applicationList = loanInfoRepository.findAllApplicationSummary(currUserId);
+                logger.info("Fetched applications for username: {}", accUsername);
                 return ResponseEntity.ok(new ApiResponse<>(true, "Applications fetched successfully", applicationList));
             }
             else{
@@ -121,6 +127,7 @@ public class ApplicationService {
                         .body(new ApiResponse<>(false, "Account does not exist with username"+accUsername, null));
             }
         } catch (Exception e) {
+            logger.info("Something went wrong fetching all applications.");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Internal Server Error: Please try again later", null));
         }
@@ -152,6 +159,7 @@ public class ApplicationService {
                     EmploymentDetailsDTO employmentDetailsDTO = mapper.toEmploymentDetailsDTO(employmentDetails);
 
                     LoanApplicationDTO loanApplicationDTO = new LoanApplicationDTO(userDTO, loanInfoDTO,employmentDetailsDTO);
+                    logger.info("Fetched application for: {}",accUsername);
                     return ResponseEntity.ok(new ApiResponse<>(true,"Application found",loanApplicationDTO));
                 }
                 else{
@@ -163,6 +171,7 @@ public class ApplicationService {
             }
         }
         catch (Exception e){
+            logger.error("Something went wrong fetching application with id :{}",loanInfoId);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ApiResponse<>(false,"Internal Server Error: Please try again later",null));
         }
     }

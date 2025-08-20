@@ -1,5 +1,6 @@
 package com.abcbank.loan_processing.controller;
 
+import com.abcbank.loan_processing.dto.ApiResponse;
 import com.abcbank.loan_processing.entity.Account;
 import com.abcbank.loan_processing.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,12 +19,12 @@ public class AuthController {
     AccountService accountService;
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(HttpServletRequest request,@RequestBody Account account) {
+    public ResponseEntity<ApiResponse<String>> register(HttpServletRequest request, @RequestBody Account account) {
         return accountService.register(request,account);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpServletRequest request) {
+    public ResponseEntity<String> logout(HttpServletRequest request) {
         request.getSession().invalidate();
         return ResponseEntity.ok("Logged out successfully");
     }

@@ -29,6 +29,7 @@ public class AccountDetailsServiceImpl implements UserDetailsService {
         try {
             Optional<Account> currAccount = accountRepository.findByUsername(username);
             if(currAccount.isPresent()){
+                logger.info("User found with username: {}", username);
                 return new AccountPrincipal(currAccount.get());
             }
             throw new UsernameNotFoundException("Account not found with username: " + username);
