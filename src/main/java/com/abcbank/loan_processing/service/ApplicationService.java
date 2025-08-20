@@ -42,7 +42,6 @@ public class ApplicationService {
     @Transactional
     public ResponseEntity<ApiResponse<String>> submitApplication(LoanApplication loanApplication) {
         try {
-            // 1) Auth & account
             var auth = SecurityContextHolder.getContext().getAuthentication();
             if (auth == null || !auth.isAuthenticated()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -52,12 +51,10 @@ public class ApplicationService {
             Account userAccount = accountRepository.findByUsername(accUsername)
                     .orElseThrow(() -> new IllegalStateException("Account not found: " + accUsername));
 
-            // 2) null-safe extraction from DTOs
             User incomingUser            = Optional.ofNullable(loanApplication.getUser()).orElseGet(User::new);
             LoanInfo incomingLoanInfo    = Optional.ofNullable(loanApplication.getLoanInfo()).orElseGet(LoanInfo::new);
             EmploymentDetails incomingEd = Optional.ofNullable(loanApplication.getEmploymentDetails()).orElseGet(EmploymentDetails::new);
 
-            // 3) Attach/prepare aggregate root
             User existing = userAccount.getUser();
             if (existing == null) {                 // first application for this account
                 existing = new User();
@@ -70,17 +67,16 @@ public class ApplicationService {
                         .body(new ApiResponse<>(false, "SSN number does not match our records. Enter your ssn number", null));
             }
 
-            // 4) Copy/update simple fields
             existing.updateFrom(incomingUser);
 
-            // 5) EmploymentDetails: update-if-exists, else create
+            // EmploymentDetails: update-if-exists, else create
             if (existing.getEmploymentDetails() != null) {
                 incomingEd.setId(existing.getEmploymentDetails().getId());
             }
             existing.setEmploymentDetails(incomingEd);
             incomingEd.setUser(existing);
 
-            // 6) LoanInfo: create a new loan record for a new submission
+            // LoanInfo: create a new loan record for a new submission
             incomingLoanInfo.setId(null);
             incomingLoanInfo.setUser(existing);
             incomingLoanInfo.setLoanApplicationDate(LocalDate.now());
@@ -104,7 +100,6 @@ public class ApplicationService {
 
             return ResponseEntity.ok(new ApiResponse<>(true, "Application submitted successfully", null));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(new ApiResponse<>(false, "Internal Server Error: Unable to submit application", null));
         }

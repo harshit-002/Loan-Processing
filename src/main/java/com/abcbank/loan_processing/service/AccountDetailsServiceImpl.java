@@ -3,6 +3,8 @@ package com.abcbank.loan_processing.service;
 import com.abcbank.loan_processing.entity.Account;
 import com.abcbank.loan_processing.entity.AccountPrincipal;
 import com.abcbank.loan_processing.repository.AccountRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,6 +16,7 @@ import java.util.Optional;
 @Component
 @Service
 public class AccountDetailsServiceImpl implements UserDetailsService {
+    private static final Logger logger = LoggerFactory.getLogger(LoanApplicationRetryService.class);
 
     private AccountRepository accountRepository;
 
@@ -31,7 +34,7 @@ public class AccountDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("Account not found with username: " + username);
         }
         catch (UsernameNotFoundException e){
-            System.out.println("exception: "+e.getMessage());
+            logger.error("Error occurred loading user{}", e.getMessage());
             throw new UsernameNotFoundException("account not found");
         }
     }

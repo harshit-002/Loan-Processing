@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class LoanApplicationRetryService {
@@ -66,7 +65,7 @@ public class LoanApplicationRetryService {
                 loanInfoRepository.save(loan);
             }
             catch (Exception e) {
-                System.out.println("exception occurred: "+e.getMessage());
+                logger.error("Exception occurred: {}", e.getMessage());
                 loan.setRetryCount(loan.getRetryCount() + 1);
                 loanInfoRepository.save(loan);
             }

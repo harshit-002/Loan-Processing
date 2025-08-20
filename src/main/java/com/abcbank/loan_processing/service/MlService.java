@@ -63,13 +63,13 @@ public class MlService {
                             MLPredictionResponseDTO.class
                     );
             if (Response.getStatusCode().is2xxSuccessful() && Response.getBody() != null) {
-                logger.info("ML Api response received successfully{}", Response);
+//                logger.info("ML Api response received successfully{}", Response);
                 return Response.getBody();
             }
         } catch (ResourceAccessException e) {
             logger.info("ML API timeout (over 4 sec), returning default response");
         } catch (Exception e) {
-           logger.error("Error calling ML API: " + e.getMessage());
+            logger.error("Error calling ML API: {}", e.getMessage());
         }
 
         // Default response if timeout or error
