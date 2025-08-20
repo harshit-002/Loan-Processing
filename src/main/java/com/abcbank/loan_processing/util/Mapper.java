@@ -81,10 +81,10 @@ public class Mapper {
         dto.setAnnualInc(employmentDetails.getAnnualSalary());
 
         if(creditBureau == null) {
-            String dateStr = "12-13-1999";
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy");
-            LocalDate date = LocalDate.parse(dateStr, formatter);
-            creditBureau = new CreditBureau("",11,1,1,1,1,1, 11L,1.0,1,date);
+            String defaultEarliestCrLine = "2015-01-20";
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+            LocalDate date = LocalDate.parse(defaultEarliestCrLine, formatter);
+            creditBureau = new CreditBureau("",0,0,120,130,3,0,0L,0.1,9,date);
         }
 
         dto.setDelinq2yrs(creditBureau.getDelinq2yrs());

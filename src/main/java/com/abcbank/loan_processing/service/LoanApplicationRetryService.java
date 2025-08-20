@@ -37,7 +37,7 @@ public class LoanApplicationRetryService {
     private ObjectMapper objectMapper;
 
     @Transactional
-    @Scheduled(fixedRate = 600000) // retry every 60 min
+    @Scheduled(fixedRate = 60000) // retry every 60 sec
     public void retryPendingApplications(){
         logger.info("Re-tyring pending applications, Time: {}", LocalDateTime.now());
         List<LoanInfo> pendingList = loanInfoRepository.findByStatus("Pending");

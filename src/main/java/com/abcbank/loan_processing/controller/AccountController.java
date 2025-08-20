@@ -1,6 +1,5 @@
 package com.abcbank.loan_processing.controller;
 
-import com.abcbank.loan_processing.entity.Account;
 import com.abcbank.loan_processing.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

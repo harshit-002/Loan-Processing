@@ -55,7 +55,6 @@ class ApplicationServiceTest {
 
     @Test
     void testSubmitApplication_Success() throws Exception {
-        // Setup mocks and input
         LoanApplication loanApplication = new LoanApplication();
         Account account = new Account();
         account.setSsnNumber("123");
@@ -63,14 +62,12 @@ class ApplicationServiceTest {
         user.setSsnNumber("123");
         account.setUser(user);
 
-        // System.out.println("\n\n\n\n\n\n\n\n\n||||||||||\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-
         when(accountRepository.findByUsername("testuser")).thenReturn(Optional.of(account));
         loanApplication.setUser(user);
 
         MLPredictionResponseDTO mlResponse = new MLPredictionResponseDTO();
-        mlResponse.setScore(BigDecimal.valueOf(100.0));
-        mlResponse.setDecision("APPROVED");
+        mlResponse.setScore(BigDecimal.valueOf(700.0));
+        mlResponse.setDecision("Accepted");
         mlResponse.setDeclineReasons(null);
 
         when(mlService.getStatusFromModel(any(), any(), any())).thenReturn(mlResponse);
@@ -88,7 +85,6 @@ class ApplicationServiceTest {
         user.setId(1L);
         account.setUser(user);
 
-        //  System.out.println("\n\n\n\n\n\n\n\n\n||||||||||\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
 
         when(accountRepository.findByUsername("testuser")).thenReturn(Optional.of(account));
         when(loanInfoRepository.findAllApplicationSummary(1L)).thenReturn(new ArrayList<>());
@@ -111,9 +107,6 @@ class ApplicationServiceTest {
         loanInfo.setUser(user);
 
         user.setLoanInfos(List.of(loanInfo));
-
-        //  System.out.println("\n\n\n\n\n\n\n\n\n||||||||||\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-
 
         when(accountRepository.findByUsername("testuser")).thenReturn(Optional.of(account));
         when(loanInfoRepository.findLoanInfoById(2L)).thenReturn(Optional.of(loanInfo));
