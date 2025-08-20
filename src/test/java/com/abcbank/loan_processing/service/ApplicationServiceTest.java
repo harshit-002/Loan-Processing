@@ -57,9 +57,9 @@ class ApplicationServiceTest {
     void testSubmitApplication_Success() throws Exception {
         LoanApplication loanApplication = new LoanApplication();
         Account account = new Account();
-        account.setSsnNumber("123");
+        account.setSsnNumber("12345");
         User user = new User();
-        user.setSsnNumber("123");
+        user.setSsnNumber("12345");
         account.setUser(user);
 
         when(accountRepository.findByUsername("testuser")).thenReturn(Optional.of(account));
