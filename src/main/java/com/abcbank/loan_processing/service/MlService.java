@@ -31,7 +31,7 @@ public class MlService {
     private Mapper mapper;
     @Autowired
     private ObjectMapper objectMapper;
-    private final String mlApiUrl = "http://localhost:5000/api/predict";
+    private final String mlApiUrl = "Ml model API";
 
     public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails empDetails) throws JsonProcessingException {
         Optional<CreditBureau> creditBureauDataOpt = creditBureauRepository.findById(user.getSsnNumber());
