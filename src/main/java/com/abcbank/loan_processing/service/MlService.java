@@ -1,45 +1,82 @@
 package com.abcbank.loan_processing.service;
+import com.abcbank.loan_processing.entity.CreditBureau;
+import com.abcbank.loan_processing.dto.MLPredictionRequestDTO;
+import com.abcbank.loan_processing.dto.MLPredictionResponseDTO;
+import com.abcbank.loan_processing.entity.EmploymentDetails;
+import com.abcbank.loan_processing.entity.LoanInfo;
+import com.abcbank.loan_processing.entity.User;
+import com.abcbank.loan_processing.repository.CreditBureauRepository;
+import com.abcbank.loan_processing.util.Mapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
+import java.math.BigDecimal;
+import java.util.Optional;
 
 @Service
 public class MlService {
+    private static final Logger logger = LoggerFactory.getLogger(MlService.class);
+    @Autowired
+    private CreditBureauRepository creditBureauRepository;
 
-    private final String mlApiUrl = "http://localhost:8080/api/predict";
+    @Autowired
+    private Mapper mapper;
+    @Autowired
+    private ObjectMapper objectMapper;
+    private final String mlApiUrl = "http://localhost:5000/api/predict";
 
-    public Map<String, Object> getPrediction(double[] features) {
-        // Create RestTemplate with 4-second timeout
+    public MLPredictionResponseDTO getStatusFromModel(User user, LoanInfo loanInfo, EmploymentDetails empDetails) throws JsonProcessingException {
+        Optional<CreditBureau> creditBureauDataOpt = creditBureauRepository.findById(user.getSsnNumber());
+        CreditBureau creditBureauData = null;
+
+        if(creditBureauDataOpt.isPresent()){
+            creditBureauData = creditBureauDataOpt.get();
+        }
+        MLPredictionRequestDTO req = mapper.toMlPredictionRequestDTO(loanInfo,empDetails,creditBureauData);
+
+        return this.getPrediction(req);
+    }
+
+    public MLPredictionResponseDTO getPrediction(MLPredictionRequestDTO requestDto) throws JsonProcessingException {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(4000); // 4 sec connect timeout
-        requestFactory.setReadTimeout(4000);    // 4 sec read timeout
+        requestFactory.setConnectTimeout(4000);
+        requestFactory.setReadTimeout(4000);
         RestTemplate timeoutRestTemplate = new RestTemplate(requestFactory);
-
-        Map<String, Object> requestBody = Map.of("features", features);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-
+        HttpEntity<MLPredictionRequestDTO> requestEntity = new HttpEntity<>(requestDto, headers);
         try {
-            ResponseEntity<Map> response =
-                    timeoutRestTemplate.postForEntity(mlApiUrl, requestEntity, Map.class);
-
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-                return response.getBody();
+            ResponseEntity<MLPredictionResponseDTO> Response =
+                    timeoutRestTemplate.postForEntity(
+                            mlApiUrl,
+                            requestEntity,
+                            MLPredictionResponseDTO.class
+                    );
+            if (Response.getStatusCode().is2xxSuccessful() && Response.getBody() != null) {
+                logger.info("ML Api response received successfully{}", Response);
+                return Response.getBody();
             }
         } catch (ResourceAccessException e) {
-            System.out.println("ML API timeout (over 4 sec), returning default score -1");
+            logger.info("ML API timeout (over 4 sec), returning default response");
         } catch (Exception e) {
-            System.out.println("Error calling ML API: " + e.getMessage());
+            logger.error("Error calling ML API: {}", e.getMessage());
         }
 
         // Default response if timeout or error
-        return Map.of("score", -1,"declineReason","none");
+        MLPredictionResponseDTO defaultResponse = new MLPredictionResponseDTO();
+        defaultResponse.setScore(BigDecimal.valueOf(-1));
+        defaultResponse.setDeclineReasons(null);
+        defaultResponse.setDecision("Pending");
+        return defaultResponse;
     }
 }

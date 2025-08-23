@@ -18,11 +18,15 @@ public class LoanInfo {
     private String loanPurpose;
     private LocalDate loanApplicationDate;
 
+    @Lob
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    private String status = "PENDING";
+    private String status = "Pending";
+
+    @Lob
     private String declineReason;
+    private int retryCount = 0;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")

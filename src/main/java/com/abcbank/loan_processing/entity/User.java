@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,12 +45,17 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private EmploymentDetails employmentDetails;
 
+    @OneToOne
+    @JoinColumn(name="account_id")
+    private Account account;
+
     public void updateFrom(User incomingUser) {
         this.firstName = incomingUser.firstName;
         this.middleName = incomingUser.middleName;
         this.lastName = incomingUser.lastName;
         this.dateOfBirth = incomingUser.dateOfBirth;
         this.maritalStatus = incomingUser.maritalStatus;
+        this.ssnNumber = incomingUser.ssnNumber;
 
         if (this.contactInfo == null) {
             this.contactInfo = new ContactInfo();
