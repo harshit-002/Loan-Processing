@@ -132,7 +132,7 @@ public class ApplicationService {
                     .body(new ApiResponse<>(false, "Internal Server Error: Please try again later", null));
         }
     }
-
+@Transactional
     public ResponseEntity<ApiResponse<LoanApplicationDTO>> getApplicationById(Long loanInfoId) {
         try{
             SecurityContext context = SecurityContextHolder.getContext();

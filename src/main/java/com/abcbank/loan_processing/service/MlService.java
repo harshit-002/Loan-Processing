@@ -19,7 +19,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class MlService {
@@ -42,7 +42,42 @@ public class MlService {
         }
         MLPredictionRequestDTO req = mapper.toMlPredictionRequestDTO(loanInfo,empDetails,creditBureauData);
 
-        return this.getPrediction(req);
+        return this.getRandomPrediction(req);
+    }
+
+    public MLPredictionResponseDTO getRandomPrediction(MLPredictionRequestDTO requestDto){
+        Random random = new Random();
+        int randomScore = 400 + random.nextInt(501); // 400 + (0 to 500) = 400 to 900
+
+        // Create response with random score
+        MLPredictionResponseDTO response = new MLPredictionResponseDTO();
+        response.setScore(BigDecimal.valueOf(randomScore));
+
+        // Set decision based on score ranges
+        String decision;
+        List<MLPredictionResponseDTO.DeclineReason> declineReasons = new ArrayList<>();
+        MLPredictionResponseDTO.DeclineReason demoDR = new MLPredictionResponseDTO.DeclineReason("none","none","none");
+
+        if (randomScore >= 750) {
+            decision = "Approved";
+            declineReasons = null;
+        } else if (randomScore >= 650) {
+            decision = "Approved";
+            declineReasons = null;
+        } else if (randomScore >= 550) {
+            decision = "Under Review";
+            declineReasons.add(demoDR);
+        } else {
+            decision = "Declined";
+            declineReasons.add(demoDR);
+        }
+
+        response.setDecision(decision);
+        response.setDeclineReasons(declineReasons);
+
+        logger.info("Generated random credit score: {} with decision: {}", randomScore, decision);
+
+        return response;
     }
 
     public MLPredictionResponseDTO getPrediction(MLPredictionRequestDTO requestDto) throws JsonProcessingException {
