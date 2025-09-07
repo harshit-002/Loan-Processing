@@ -18,7 +18,12 @@ public interface LoanInfoRepository extends JpaRepository<LoanInfo,Long> {
     " WHERE u.id =:id ")
     List<ApplicationSummaryDTO> findAllApplicationSummary(@Param("id") Long id);
 
-    Optional<LoanInfo> findLoanInfoById(Long id);
 
+    @Query("SELECT li FROM LoanInfo li " +
+            "JOIN FETCH li.user u " +
+            "WHERE li.id = :loanInfoId AND u.ssnNumber = :ssn")
+    Optional<LoanInfo> findLoanInfoWithUserDetailsAndVerifyAccess(@Param("loanInfoId") Long loanInfoId,
+                                                                  @Param("ssn") String ssn);
+    Optional<LoanInfo> findLoanInfoById(Long id);
     List<LoanInfo> findByStatus(String status);
 }
