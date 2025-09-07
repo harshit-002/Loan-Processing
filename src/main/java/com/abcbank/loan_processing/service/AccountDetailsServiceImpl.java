@@ -16,7 +16,7 @@ import java.util.Optional;
 @Component
 @Service
 public class AccountDetailsServiceImpl implements UserDetailsService {
-    private static final Logger logger = LoggerFactory.getLogger(LoanApplicationRetryService.class);
+    private static final Logger logger = LoggerFactory.getLogger(AccountDetailsServiceImpl.class);
 
     private AccountRepository accountRepository;
 

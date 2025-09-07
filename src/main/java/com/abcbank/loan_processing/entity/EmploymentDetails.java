@@ -22,7 +22,4 @@ public class EmploymentDetails {
     @Embedded
     private Address address;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
 }
