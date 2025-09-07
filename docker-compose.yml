@@ -1,0 +1,29 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: dockerSqlDB
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: docker_loanapp_db
+      MYSQL_USER: harshit
+      MYSQL_PASSWORD: 3238
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  backend:
+    build: .
+    container_name: loanapp-be
+    depends_on:
+      - db
+    environment:
+      DB_URL: jdbc:mysql://db:3306/docker_loanapp_db
+      DB_USERNAME: harshit
+      DB_PASSWORD: 3238
+    ports:
+      - "8080:8080"
+
+volumes:
+  mysql_data:
