@@ -12,6 +12,9 @@ public class AccountPrincipal implements UserDetails {
         this.account = account;
     }
 
+    public Account getAccount() {
+        return account;
+    }
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();

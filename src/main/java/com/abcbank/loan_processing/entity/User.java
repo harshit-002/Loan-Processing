@@ -42,12 +42,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<LoanInfo> loanInfos;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne( cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name="empId", referencedColumnName = "id")
     private EmploymentDetails employmentDetails;
-
-    @OneToOne
-    @JoinColumn(name="account_id")
-    private Account account;
 
     public void updateFrom(User incomingUser) {
         this.firstName = incomingUser.firstName;

@@ -28,6 +28,7 @@ public class Account {
     @Column(unique = true, nullable = false)
     private String password;
 
-    @OneToOne(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
     private User user;
 }
