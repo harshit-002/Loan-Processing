@@ -58,19 +58,16 @@ public class MlService {
         List<MLPredictionResponseDTO.DeclineReason> declineReasons = new ArrayList<>();
         MLPredictionResponseDTO.DeclineReason demoDR = new MLPredictionResponseDTO.DeclineReason("none","none","none");
 
-        if (randomScore >= 750) {
+       if (randomScore >= 650) {
             decision = "Approved";
             declineReasons = null;
-        } else if (randomScore >= 650) {
-            decision = "Approved";
-            declineReasons = null;
-        } else if (randomScore >= 550) {
+       } else if (randomScore >= 550) {
             decision = "Under Review";
             declineReasons.add(demoDR);
-        } else {
+       } else {
             decision = "Declined";
             declineReasons.add(demoDR);
-        }
+       }
 
         response.setDecision(decision);
         response.setDeclineReasons(declineReasons);

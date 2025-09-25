@@ -7,7 +7,7 @@ import lombok.Data;
 @AllArgsConstructor
 public class LoanApplicationDTO {
     private UserDTO user;
-    private LoanInfoDTO application;
+    private LoanInfoDTO loanInfo;
     private EmploymentDetailsDTO employmentDetails;
 }
 

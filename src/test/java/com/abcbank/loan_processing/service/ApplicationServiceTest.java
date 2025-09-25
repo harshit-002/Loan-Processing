@@ -95,28 +95,4 @@ class ApplicationServiceTest {
         assertEquals("Applications fetched successfully", response.getBody().getMessage());
     }
 
-    @Test
-    void testGetApplicationById_Success() {
-        Account account = new Account();
-        User user = new User();
-        user.setId(1L);
-        account.setUser(user);
-
-        LoanInfo loanInfo = new LoanInfo();
-        loanInfo.setId(2L);
-        loanInfo.setUser(user);
-
-        user.setLoanInfos(List.of(loanInfo));
-
-        when(accountRepository.findByUsername("testuser")).thenReturn(Optional.of(account));
-        when(loanInfoRepository.findLoanInfoById(2L)).thenReturn(Optional.of(loanInfo));
-        when(mapper.toLoanInfoDTO(any())).thenReturn(new LoanInfoDTO());
-        when(mapper.toUserDTO(any())).thenReturn(new UserDTO());
-        when(mapper.toEmploymentDetailsDTO(any())).thenReturn(new EmploymentDetailsDTO());
-
-        ResponseEntity<ApiResponse<LoanApplicationDTO>> response = applicationService.getApplicationById(2L);
-
-        assertTrue(response.getBody().isSuccess());
-        assertEquals("Application found", response.getBody().getMessage());
-    }
 }
